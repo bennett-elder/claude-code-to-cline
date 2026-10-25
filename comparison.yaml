@@ -1,0 +1,294 @@
+# The source of truth. index.html and gaps.html are generated from this file.
+#
+# Enforced by scripts/build.mjs:
+#   - every construct needs a source URL for both products
+#   - every construct needs verified: YYYY-MM-DD
+#   - equivalence must be exact, partial, or none
+#
+# Supported syntax is documented in README.md. Quote any value containing a colon
+# followed by a space. The parser throws on anything it does not understand.
+
+meta:
+  title: "Claude Code to Cline"
+  subtitle: "A construct-by-construct map of the agent harness, with a source for every claim."
+  verified: "2026-10-24"
+  stale_after_days: 120
+
+constructs:
+  - id: "instructions"
+    name: "Always-on instructions"
+    equivalence: "exact"
+    claude_code:
+      where: "CLAUDE.md at the project root, plus a user file, a local file, and an organization policy file."
+      mechanism: "Loaded into context at session start. The project-root file is re-read from disk after /compact. Subdirectory CLAUDE.md files and on-demand files are loaded on demand."
+    cline:
+      where: ".clinerules/ or .cline/rules/ in the workspace, plus a global Cline Rules directory."
+      mechanism: "Rule files in either directory are combined into one set. Numeric filename prefixes set the order. Cline also reads AGENTS.md, ~/.agents/AGENTS.md, .cursorrules, and .windsurfrules."
+    note: "Cline reads more foreign rule formats out of the box, including the Cursor and Windsurf files. Both products read AGENTS.md, so that file is the portable choice."
+    source:
+      claude_code: "https://docs.claude.com/en/docs/claude-code/memory"
+      cline: "https://docs.cline.bot/customization/cline-rules.md"
+    verified: "2026-10-24"
+
+  - id: "path-scoped-rules"
+    name: "Path-scoped rules"
+    equivalence: "exact"
+    claude_code:
+      where: ".claude/rules/*.md with paths: frontmatter."
+      mechanism: "A rule that names paths loads when a matching file is in play rather than at session start. Sized per file, and a file over the limit is truncated with a note telling Claude to read the rest."
+    cline:
+      where: "Any rule file in .clinerules/ with paths: frontmatter."
+      mechanism: "Conditions are evaluated against open files, visible tabs, mentioned paths, and edited files. A matching rule shows a notification naming the file."
+    note: "The closest thing to a drop-in port in the whole map. The frontmatter key is the same, and Cline documents its activation inputs more precisely than Claude does."
+    source:
+      claude_code: "https://docs.claude.com/en/docs/claude-code/memory"
+      cline: "https://docs.cline.bot/customization/cline-rules.md"
+    verified: "2026-10-24"
+
+  - id: "imports"
+    name: "Instruction imports"
+    equivalence: "none"
+    claude_code:
+      where: "@path directives inside CLAUDE.md or a rules file."
+      mechanism: "The imported file loads together with the file that imports it, so splitting into imports organizes content without reducing context cost."
+    cline:
+      where: "No documented import directive."
+      mechanism: "Rule files are combined as independent files. Content reaches the agent by being in a rule file, or by the agent reading a file it is told about."
+    note: "A CLAUDE.md tree held together with @imports has to be flattened. The context cost of doing so is the same as it was before, because imports never saved context."
+    source:
+      claude_code: "https://docs.claude.com/en/docs/claude-code/memory"
+      cline: "https://docs.cline.bot/customization/cline-rules.md"
+    verified: "2026-10-24"
+
+  - id: "skills"
+    name: "Skills"
+    equivalence: "partial"
+    claude_code:
+      where: ".claude/skills/<name>/SKILL.md, a user skills directory, and plugin skills/ directories."
+      mechanism: "Three-tier progressive disclosure. Frontmatter carries name, description, and optionally allowed-tools, disable-model-invocation, model, and context: fork. Invoked by description match or by /skill-name."
+    cline:
+      where: ".cline/skills/<name>/SKILL.md and ~/.cline/skills/."
+      mechanism: "Three-tier progressive disclosure. Frontmatter carries name, which must match the directory name, and description, capped at 1024 characters. Invoked through the skills tool or by /skill-name."
+    note: "Same file format, same loading model, different frontmatter surface. Cline documents no equivalent for allowed-tools, disable-model-invocation, model, or context: fork, so a skill that gates tools or forks into a subagent keeps only its instructions after the move."
+    source:
+      claude_code: "https://docs.claude.com/en/docs/claude-code/skills"
+      cline: "https://docs.cline.bot/customization/skills.md"
+    verified: "2026-10-24"
+
+  - id: "slash-commands"
+    name: "Slash commands"
+    equivalence: "partial"
+    claude_code:
+      where: ".claude/commands/*.md, which now merge into the skill system."
+      mechanism: "A file at .claude/commands/deploy.md and a skill at .claude/skills/deploy/SKILL.md both produce /deploy. Subdirectories namespace as /frontend:component and plugin commands as /my-plugin:review. Arguments arrive as $ARGUMENTS and $1."
+    cline:
+      where: "Built-in commands, plus any enabled skill exposed as a command."
+      mechanism: "/newtask, /smol with alias /compact, /newrule, /deep-planning, and /reportbug. Any enabled skill is invocable as /skill-name. There is no documented file format for authoring a new top-level command."
+    note: "A commands file ports as a skill directory, not as a command file. The built-ins have no Claude counterpart, and /newtask and /deep-planning are the strongest reason to stay in Cline."
+    source:
+      claude_code: "https://docs.claude.com/en/docs/claude-code/skills"
+      cline: "https://docs.cline.bot/core-workflows/using-commands.md"
+    verified: "2026-10-24"
+
+  - id: "subagents"
+    name: "Subagents"
+    equivalence: "none"
+    claude_code:
+      where: ".claude/agents/*.md."
+      mechanism: "Frontmatter sets name, description, tools, model, permissionMode, skills, memory, and hooks. Delegation triggers on a description match. Subagents can spawn subagents, run in the background, and fork the current conversation."
+    cline:
+      where: "No agent files. A spawn_agent tool."
+      mechanism: "Cline decides when a task is worth splitting, or you ask for one. Each subagent gets a separate context window and the built-in tools for the current mode, and does not get MCP tools. A subagent can start subagents. Approving spawn_agent approves everything it then does."
+    note: "The largest gap in the map. There is no way to declare an agent type, pin its model, or restrict its tools. Documented as CLI and Desktop only, so neither the VS Code nor the JetBrains extension has subagents at all."
+    surfaces:
+      vscode: "no"
+      desktop: "yes"
+      cli: "yes"
+    source:
+      claude_code: "https://docs.claude.com/en/docs/claude-code/sub-agents"
+      cline: "https://docs.cline.bot/features/subagents"
+    verified: "2026-10-24"
+
+  - id: "hooks"
+    name: "Lifecycle hooks"
+    equivalence: "none"
+    claude_code:
+      where: "Hooks in a settings file, at user, project, or managed scope."
+      mechanism: "Per-event entries with matchers. Events include SessionStart, UserPromptSubmit, PreToolUse, PostToolUse, PreCompact, Stop, SubagentStop, and SessionEnd. A handler can be a command, an HTTP call, an MCP tool, a prompt, or an agent. Exit code 2 blocks the action, and JSON output can inject additionalContext and systemMessage."
+    cline:
+      where: "The hooks object on an AgentPlugin, authored in TypeScript."
+      mechanism: "Exactly seven events: beforeRun, afterRun, beforeModel, afterModel, beforeTool, afterTool, onEvent. beforeTool is the only one that stands in for PreToolUse."
+    note: "Authoring a hook means authoring a plugin, installed with cline plugin install from a file URL, a git repo, an npm package, or a local path. There is no config-file hook and no prompt or agent handler. Documented as SDK, CLI, and Kanban only."
+    surfaces:
+      vscode: "no"
+      cli: "yes"
+      sdk: "yes"
+    source:
+      claude_code: "https://docs.claude.com/en/docs/claude-code/hooks"
+      cline: "https://docs.cline.bot/sdk/plugins"
+    verified: "2026-10-24"
+
+  - id: "permissions"
+    name: "Permission rules"
+    equivalence: "none"
+    claude_code:
+      where: "permissions.allow, ask, and deny in a settings file, at any scope including managed."
+      mechanism: "A rule names a tool and optionally a specifier, such as Bash(npm run test:*), WebFetch(domain:example.com), or mcp__puppeteer__*. Read and Edit rules take path patterns. Six permission modes, and managed settings win over local ones."
+    cline:
+      where: "Auto Approve toggles, plus YOLO mode."
+      mechanism: "Categories cover read and edit project files, read and edit all files, safe commands, all commands, the browser, and MCP servers. Whether a command needs approval is a requires_approval flag the model sets on each call; the docs present their safe-command examples as examples, not guarantees."
+    note: "With no pattern rules, a denylist becomes a beforeTool hook. The safe-command split is a model judgement rather than configuration you wrote, which is a different threat model from an allowlist."
+    source:
+      claude_code: "https://docs.claude.com/en/docs/claude-code/permissions"
+      cline: "https://docs.cline.bot/features/auto-approve"
+    verified: "2026-10-24"
+
+  - id: "mcp"
+    name: "MCP servers"
+    equivalence: "partial"
+    claude_code:
+      where: "Local, project through .mcp.json, and user scopes."
+      mechanism: "stdio, SSE, HTTP, and WebSocket transports. Servers can be scoped to a subagent, and a plugin can provide them."
+    cline:
+      where: "~/.cline/data/settings/cline_mcp_settings.json, overridable with CLINE_MCP_SETTINGS_PATH."
+      mechanism: "stdio, streamableHttp, and legacy SSE, a per-server autoApprove list, and a cline mcp wizard that handles OAuth."
+    note: "Both files key on mcpServers, so the server blocks mostly carry over. The file path and the autoApprove list do not."
+    source:
+      claude_code: "https://docs.claude.com/en/docs/claude-code/mcp"
+      cline: "https://docs.cline.bot/mcp/mcp-overview"
+    verified: "2026-10-24"
+
+  - id: "status-line"
+    name: "Status line"
+    equivalence: "none"
+    claude_code:
+      where: "The statusLine key in a settings file."
+      mechanism: "Runs any shell script. The script receives JSON session data on stdin and whatever it prints becomes the status line. The /statusline command generates a script and writes the setting for you."
+    cline:
+      where: "No setting. The status bar is a fixed component."
+      mechanism: "No config key and no plugin extension point adds a segment. Plugins expose tools, hooks, commands, rules, and events, and the hooks are agent lifecycle hooks only."
+    note: "Checked against the Cline v3.0.73 source, where the TUI status bar renders a fixed set of segments in one component. The workaround is a process that renders the line outside the TUI, which is what clinepass-status does."
+    source:
+      claude_code: "https://docs.claude.com/en/docs/claude-code/statusline"
+      cline: "https://github.com/bennett-elder/clinepass-status"
+    verified: "2026-10-24"
+
+  - id: "plugins"
+    name: "Plugins"
+    equivalence: "partial"
+    claude_code:
+      where: "Marketplaces declared in settings, then plugins installed from them."
+      mechanism: "A plugin can ship skills, agents, hooks, commands, and MCP servers. Plugin skills are namespaced, so a review skill inside my-plugin becomes /my-plugin:review. enabledPlugins and extraKnownMarketplaces are settings keys."
+    cline:
+      where: "cline plugin install, from a file URL, a git repo, an npm package, or a local path."
+      mechanism: "Installs land in the global store or in a project .cline/plugins directory, with --cwd choosing the latter. A plugin registers tools, hooks, slash commands, rules, and events."
+    note: "Both bundle the same kinds of extension. Distribution is the difference: Claude Code installs from a marketplace, Cline installs from a source you name. Documented as SDK, CLI, and Kanban only, so a plugin cannot reach the IDE extensions."
+    surfaces:
+      vscode: "no"
+      cli: "yes"
+      sdk: "yes"
+    source:
+      claude_code: "https://docs.claude.com/en/docs/claude-code/settings"
+      cline: "https://docs.cline.bot/customization/plugins"
+    verified: "2026-10-24"
+
+  - id: "context-management"
+    name: "Context management"
+    equivalence: "partial"
+    claude_code:
+      where: "/compact, with PreCompact and PostCompact hooks around it."
+      mechanism: "Summarizes the conversation and continues in the same session. The project-root CLAUDE.md is re-read from disk afterwards, while nested files and path-scoped rules load again on demand."
+    cline:
+      where: "/smol and /newtask."
+      mechanism: "/smol, alias /compact, condenses the current conversation and keeps you in the same task. /newtask starts a fresh task carrying a distilled handoff and drops the tool-call history."
+    note: "/smol covers the /compact case. /newtask has no Claude counterpart, and the difference matters: it discards the transcript instead of summarizing it in place."
+    source:
+      claude_code: "https://docs.claude.com/en/docs/claude-code/memory"
+      cline: "https://docs.cline.bot/core-workflows/using-commands.md"
+    verified: "2026-10-24"
+
+  - id: "auto-memory"
+    name: "Automatic memory"
+    equivalence: "none"
+    claude_code:
+      where: "Auto memory, stored per repository."
+      mechanism: "Claude writes its own notes from your corrections and preferences. The notes load at session start, capped at the first 200 lines or 25 KB, and /memory shows and edits them."
+    cline:
+      where: "No automatic memory. The Memory Bank is a convention you install."
+      mechanism: "A memory-bank/ directory of markdown files that a rule tells the agent to read and update, with phrases like update memory bank as the trigger."
+    note: "The bank is six files: projectbrief, productContext, activeContext, systemPatterns, techContext, and progress. Setting it up means pasting the instructions into a rule file and asking Cline to initialize the bank. Nothing writes it unless a rule says to."
+    source:
+      claude_code: "https://docs.claude.com/en/docs/claude-code/memory"
+      cline: "https://docs.cline.bot/best-practices/memory-bank"
+    verified: "2026-10-24"
+
+# The gaps are the point of the page. Organized by absence, not by topic.
+gaps:
+  - id: "ide-boundary"
+    title: "Half the harness never reaches the IDE extension"
+    detail: "Hooks, plugins, and scheduling are documented as SDK, CLI, and Kanban only. Subagents are CLI and Desktop only. If you work in the VS Code or JetBrains extension, none of those four exist for you, and no setting turns them on."
+    constructs: "hooks, plugins, subagents"
+    source:
+      cline: "https://docs.cline.bot/customization/plugins"
+    verified: "2026-10-24"
+
+  - id: "hook-authorship"
+    title: "A hook is a plugin, not a config entry"
+    detail: "There is no hooks key in a Cline settings file. Shipping one hook means vendoring or publishing a TypeScript plugin and installing it with cline plugin install. That is a different unit of work from adding a command to a JSON file, and it needs a review and a version."
+    constructs: "hooks"
+    source:
+      cline: "https://docs.cline.bot/sdk/plugins"
+    verified: "2026-10-24"
+
+  - id: "blocking-contract"
+    title: "The blocking contract for beforeTool is not published"
+    detail: "The docs say a hook handler is where you enforce policy and block a dangerous tool call, but they do not publish the shape a handler returns to do it. Porting a PreToolUse denylist today means reading AgentPlugin in the SDK. This is the one row where the source material is thinner than the claim it supports, and recipe 03 is marked accordingly."
+    constructs: "hooks, permissions"
+    source:
+      cline: "https://docs.cline.bot/sdk/plugins"
+    verified: "2026-10-24"
+
+  - id: "no-declarative-agents"
+    title: "You cannot declare an agent"
+    detail: "spawn_agent is a tool the model decides to call. No file declares an agent type, so a reviewer subagent with its own model, its own tool list, and its own permissions has no equivalent. Subagents also do not receive MCP tools."
+    constructs: "subagents"
+    source:
+      cline: "https://docs.cline.bot/features/subagents"
+    verified: "2026-10-24"
+
+  - id: "no-pattern-permissions"
+    title: "No pattern-based permission rules"
+    detail: "Auto Approve is a set of category toggles. Rules like Bash(npm run test:*) or mcp__puppeteer__* have no equivalent. Whether a command needs approval is a requires_approval flag the model sets per call, which is a model judgement rather than a list you wrote and reviewed."
+    constructs: "permissions"
+    source:
+      cline: "https://docs.cline.bot/features/auto-approve"
+    verified: "2026-10-24"
+
+  - id: "no-imports"
+    title: "Imports do not port"
+    detail: "Cline combines rule files and does not resolve imports. A CLAUDE.md tree held together with @path directives has to be flattened by hand, and the flattening is the migration, not a step in it."
+    constructs: "imports"
+    source:
+      claude_code: "https://docs.claude.com/en/docs/claude-code/memory"
+      cline: "https://docs.cline.bot/customization/cline-rules.md"
+    verified: "2026-10-24"
+
+  - id: "no-status-line"
+    title: "Nothing extends the status bar"
+    detail: "Claude Code runs any shell script as a status line and feeds it session JSON. Cline's TUI status bar is a fixed component with no config key and no plugin hook, so anything you need to see there has to render outside the TUI, in a terminal multiplexer or a watched pane."
+    constructs: "status-line"
+    source:
+      claude_code: "https://docs.claude.com/en/docs/claude-code/statusline"
+      cline: "https://github.com/bennett-elder/clinepass-status"
+    verified: "2026-10-24"
+
+  - id: "announced-removals"
+    title: "Do not build on the announced removals"
+    detail: "Focus Chain and Explain Changes are deprecated, and .clineignore is being removed in favor of a plugin. Focus Chain is the one that catches migrations: a CLAUDE.md that tells the agent to maintain a todo file assumes a todo feature Cline no longer has as a separate layer."
+    source:
+      cline: "https://docs.cline.bot/resources/deprecations.md"
+    verified: "2026-10-24"
+
+
+
+

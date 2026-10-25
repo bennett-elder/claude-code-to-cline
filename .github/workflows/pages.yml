@@ -1,0 +1,59 @@
+name: pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One deploy at a time. Do not cancel a run that is already deploying.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      # No install step: there are no dependencies.
+      - name: Source and staleness gates
+        run: npm run check
+
+      - name: Tests
+        run: npm test
+
+      - name: Build
+        run: npm run build
+
+      - name: Voice and prose lint
+        run: npm run lint
+
+      - uses: actions/configure-pages@v5
+        with:
+          # Enables Pages with source "GitHub Actions" on the first run, so the
+          # repo setting does not have to be flipped by hand.
+          enablement: true
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

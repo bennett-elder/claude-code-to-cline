@@ -1,0 +1,17 @@
+{
+  "name": "claude-code-to-cline-migration",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Construct-by-construct map of Claude Code's agent harness onto Cline's, with sources and staleness tracking.",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "check": "node scripts/build.mjs --check",
+    "lint": "sh scripts/lint-voice.sh && node scripts/lint-prose.mjs",
+    "test": "node --test",
+    "verify": "npm run check && npm test && npm run build && npm run lint"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
