@@ -38,11 +38,10 @@ jobs:
       - name: Voice and prose lint
         run: npm run lint
 
+      # Reads the Pages configuration. Enabling Pages is a one-time step done
+      # with a user token, because GITHUB_TOKEN cannot create a Pages site:
+      #   gh api -X POST repos/{owner}/{repo}/pages -f build_type=workflow
       - uses: actions/configure-pages@v5
-        with:
-          # Enables Pages with source "GitHub Actions" on the first run, so the
-          # repo setting does not have to be flipped by hand.
-          enablement: true
 
       - uses: actions/upload-pages-artifact@v3
         with:

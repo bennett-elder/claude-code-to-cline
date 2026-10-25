@@ -100,11 +100,16 @@ which ones to check first.
 Pages is built by Actions and served as an artifact, so nothing generated is committed.
 `.github/workflows/pages.yml` runs the gates, builds `dist/`, and deploys it:
 
-Settings → Pages → Source: *GitHub Actions*.
+Enable Pages once, before the first push. It has to be done with a user token, because
+the workflow's `GITHUB_TOKEN` is not permitted to create a Pages site:
 
-Then push to `main`. The workflow declares `pages: write` and `id-token: write` itself.
-`dist/` is gitignored, and there is no `.nojekyll`, because an artifact never goes
-through Jekyll.
+```sh
+gh api -X POST repos/<owner>/<repo>/pages -f build_type=workflow
+```
+
+That is the same as Settings → Pages → Source: *GitHub Actions*. After that, every push
+to `main` deploys. `dist/` is gitignored, and there is no `.nojekyll`, because an
+artifact never goes through Jekyll.
 
 To preview locally without publishing:
 
