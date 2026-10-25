@@ -1,5 +1,7 @@
 # Claude Code → Cline
 
+**[bennett-elder.github.io/claude-code-to-cline](https://bennett-elder.github.io/claude-code-to-cline/)**
+
 A construct-by-construct map of the agent harness: what a `CLAUDE.md` becomes, what
 `.claude/skills` becomes, what happens to a `PreToolUse` hook, and which constructs have
 no Cline equivalent at all.
